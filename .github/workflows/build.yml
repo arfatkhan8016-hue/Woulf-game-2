@@ -7,12 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip project
-        run: unzip -q WolfArena.zip
+      - name: Extract project
+        run: |
+          sudo apt-get update && sudo apt-get install -y p7zip-full
+          mkdir proj
+          F=$(ls *.zip *.7z 2>/dev/null | head -1)
+          echo "Archive: $F"
+          7z x "$F" -oproj
+          D=$(dirname "$(find proj -name settings.gradle | head -1)")
+          echo "Project folder: $D"
+          echo "PROJ=$D" >> $GITHUB_ENV
       - name: Install Blender
-        run: sudo apt-get update && sudo apt-get install -y blender
+        run: sudo apt-get install -y blender
       - name: Convert FBX to GLB
-        working-directory: WolfArena
+        working-directory: ${{ env.PROJ }}
         run: blender --background --python tools/convert_models.py -- fbx assets/models
       - uses: actions/setup-java@v4
         with:
@@ -22,9 +30,9 @@ jobs:
         with:
           gradle-version: 8.4
       - name: Build debug APK
-        working-directory: WolfArena
+        working-directory: ${{ env.PROJ }}
         run: gradle :android:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: WolfArena-apk
-          path: WolfArena/android/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJ }}/android/build/outputs/apk/debug/*.apk
