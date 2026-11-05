@@ -1,0 +1,30 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: unzip -q WolfArena.zip
+      - name: Install Blender
+        run: sudo apt-get update && sudo apt-get install -y blender
+      - name: Convert FBX to GLB
+        working-directory: WolfArena
+        run: blender --background --python tools/convert_models.py -- fbx assets/models
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.4
+      - name: Build debug APK
+        working-directory: WolfArena
+        run: gradle :android:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WolfArena-apk
+          path: WolfArena/android/build/outputs/apk/debug/*.apk
